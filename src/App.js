@@ -4,13 +4,16 @@ import Header from './components/Header';
 import Body from './components/Body';
 import Footer from './components/Footer';
 
-const MODES = [
-  { label: 'Work',        seconds: 25 * 60 },
-  { label: 'Short Break', seconds:  5 * 60 },
-  { label: 'Long Break',  seconds: 15 * 60 },
-];
-
+const DEFAULT_DURATIONS = { work: 25, shortBreak: 5, longBreak: 15 };
 const LONG_BREAK_INTERVAL = 4;
+
+function buildModes(durations) {
+  return [
+    { label: 'Work',        seconds: durations.work       * 60 },
+    { label: 'Short Break', seconds: durations.shortBreak * 60 },
+    { label: 'Long Break',  seconds: durations.longBreak  * 60 },
+  ];
+}
 
 function formatTime(secs) {
   const m = String(Math.floor(secs / 60)).padStart(2, '0');
@@ -19,14 +22,17 @@ function formatTime(secs) {
 }
 
 function App() {
+  const [durations, setDurations] = useState(DEFAULT_DURATIONS);
+  const modes = buildModes(durations);
+
   const [modeIndex, setModeIndex] = useState(0);
-  const [timeLeft, setTimeLeft]   = useState(MODES[0].seconds);
+  const [timeLeft, setTimeLeft]   = useState(modes[0].seconds);
   const [isRunning, setIsRunning] = useState(false);
   const [completed, setCompleted] = useState(0);
   const [cycle, setCycle]         = useState(1);
   const intervalRef               = useRef(null);
 
-  const currentMode = MODES[modeIndex];
+  const currentMode = modes[modeIndex];
 
   const clearTimer = useCallback(() => {
     clearInterval(intervalRef.current);
@@ -37,14 +43,23 @@ function App() {
     clearTimer();
     setIsRunning(false);
     setModeIndex(index);
-    setTimeLeft(MODES[index].seconds);
-  }, [clearTimer]);
+    setTimeLeft(modes[index].seconds);
+  }, [clearTimer, modes]);
 
   const handleReset = useCallback(() => {
     clearTimer();
     setIsRunning(false);
     setTimeLeft(currentMode.seconds);
   }, [clearTimer, currentMode.seconds]);
+
+  const handleSettingsSave = useCallback((newDurations) => {
+    const newModes = buildModes(newDurations);
+    setDurations(newDurations);
+    clearTimer();
+    setIsRunning(false);
+    setModeIndex(0);
+    setTimeLeft(newModes[0].seconds);
+  }, [clearTimer]);
 
   const handleSessionEnd = useCallback(() => {
     clearTimer();
@@ -63,7 +78,6 @@ function App() {
       handleModeChange(0);
     }
   }, [modeIndex, completed, clearTimer, handleModeChange]);
-
   useEffect(() => {
     if (isRunning) {
       intervalRef.current = setInterval(() => {
@@ -94,7 +108,7 @@ function App() {
       <div className="app-shell">
         <Header />
         <Body
-          modes={MODES}
+          modes={modes}
           modeIndex={modeIndex}
           timeLeft={formatTime(timeLeft)}
           isRunning={isRunning}
@@ -102,9 +116,11 @@ function App() {
           cycle={cycle}
           longBreakInterval={LONG_BREAK_INTERVAL}
           statusText={statusText}
+          durations={durations}
           onModeChange={handleModeChange}
           onToggle={() => setIsRunning((r) => !r)}
           onReset={handleReset}
+          onSettingsSave={handleSettingsSave}
         />
         <Footer />
       </div>
